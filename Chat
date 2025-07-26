@@ -1,0 +1,170 @@
+import React, { useState, useEffect } from "react";
+import { ChatMessage } from "@/entities/ChatMessage";
+import { InvokeLLM } from "@/integrations/Core";
+import { Send, ArrowRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { motion, AnimatePresence } from "framer-motion";
+
+export default function Chat() {
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+
+  useEffect(() => {
+    loadMessages();
+  }, []);
+
+  const loadMessages = async () => {
+    const chatHistory = await ChatMessage.list("-created_date", 20);
+    setMessages(chatHistory.reverse());
+    if (chatHistory.length > 0) {
+      setShowWelcome(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || isLoading) return;
+
+    const userMessage = inputMessage.trim();
+    setInputMessage("");
+    setIsLoading(true);
+    setShowWelcome(false);
+
+    try {
+      const response = await InvokeLLM({
+        prompt: `You are VayuGuard AI, an expert air quality assistant. Help users understand air quality, pollution levels, health impacts, and provide recommendations for cleaner routes and better air quality management. User question: ${userMessage}`,
+        add_context_from_internet: true
+      });
+
+      const chatMessage = await ChatMessage.create({
+        message: userMessage,
+        response: response
+      });
+
+      setMessages(prev => [...prev, chatMessage]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-screen">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-100 to-blue-200 px-4 py-3">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+            <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+            <span className="ml-2 font-semibold text-gray-800">AI Chatbox</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 pb-20">
+        <AnimatePresence>
+          {showWelcome && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="text-center py-20"
+            >
+              <div className="w-24 h-24 mx-auto mb-6 bg-blue-600 rounded-full flex items-center justify-center">
+                <img 
+                  src="https://images.unsplash.com/photo-1611273426858-450d8e3c9fce?w=60&h=60&fit=crop&crop=center" 
+                  alt="VayuGuard AI" 
+                  className="w-16 h-16 rounded-full"
+                />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">VayuGuard AI</h2>
+              <p className="text-gray-600 mb-8">Ask me anything about air quality, pollution, and clean routes!</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="space-y-4 max-w-2xl mx-auto">
+          {messages.map((msg, index) => (
+            <div key={msg.id || index}>
+              {/* User Message */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex justify-end mb-2"
+              >
+                <Card className="bg-blue-600 text-white p-3 max-w-xs rounded-2xl rounded-br-sm">
+                  <p className="text-sm">{msg.message}</p>
+                </Card>
+              </motion.div>
+
+              {/* AI Response */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="flex justify-start"
+              >
+                <Card className="bg-white p-3 max-w-xs rounded-2xl rounded-bl-sm shadow-md">
+                  <p className="text-sm text-gray-800">{msg.response}</p>
+                </Card>
+              </motion.div>
+            </div>
+          ))}
+
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex justify-start"
+            >
+              <Card className="bg-white p-3 rounded-2xl rounded-bl-sm shadow-md">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </div>
+      </div>
+
+      {/* Input Area */}
+      <div className="absolute bottom-20 left-4 right-4">
+        <Card className="p-4 bg-yellow-300 rounded-3xl">
+          <div className="flex items-center gap-3">
+            <Input
+              type="text"
+              placeholder="Start a conversation"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="flex-1 border-none bg-transparent placeholder-gray-600 text-gray-800 focus:ring-0"
+              disabled={isLoading}
+            />
+            <Button
+              onClick={sendMessage}
+              disabled={!inputMessage.trim() || isLoading}
+              size="icon"
+              className="bg-gray-800 hover:bg-gray-700 text-white rounded-full"
+            >
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}

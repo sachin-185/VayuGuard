@@ -1,0 +1,45 @@
+{
+  "name": "City",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "City name"
+    },
+    "aqi": {
+      "type": "number",
+      "description": "Air Quality Index"
+    },
+    "latitude": {
+      "type": "number",
+      "description": "City latitude"
+    },
+    "longitude": {
+      "type": "number",
+      "description": "City longitude"
+    },
+    "country": {
+      "type": "string",
+      "description": "Country name"
+    },
+    "pollution_level": {
+      "type": "string",
+      "enum": [
+        "good",
+        "moderate",
+        "unhealthy",
+        "very_unhealthy",
+        "hazardous"
+      ],
+      "default": "moderate"
+    },
+    "background_image": {
+      "type": "string",
+      "description": "Background image URL for the city card"
+    }
+  },
+  "required": [
+    "name",
+    "aqi"
+  ]
+}

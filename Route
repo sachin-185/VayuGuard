@@ -1,0 +1,48 @@
+{
+  "name": "Route",
+  "type": "object",
+  "properties": {
+    "starting_point": {
+      "type": "string",
+      "description": "Starting location"
+    },
+    "ending_point": {
+      "type": "string",
+      "description": "Destination location"
+    },
+    "route_data": {
+      "type": "array",
+      "description": "Route waypoints with pollution data",
+      "items": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "aqi": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "total_distance": {
+      "type": "string",
+      "description": "Total route distance"
+    },
+    "estimated_time": {
+      "type": "string",
+      "description": "Estimated travel time"
+    },
+    "average_aqi": {
+      "type": "number",
+      "description": "Average AQI along the route"
+    }
+  },
+  "required": [
+    "starting_point",
+    "ending_point"
+  ]
+}

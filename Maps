@@ -1,0 +1,158 @@
+import React, { useState, useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { City } from "@/entities/City";
+import { Search, ArrowLeft } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix for default markers in react-leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+const getMarkerColor = (aqi) => {
+  if (aqi <= 50) return '#22c55e'; // green
+  if (aqi <= 100) return '#eab308'; // yellow
+  if (aqi <= 150) return '#f97316'; // orange
+  if (aqi <= 200) return '#ef4444'; // red
+  return '#8b5cf6'; // purple
+};
+
+export default function Maps() {
+  const [cities, setCities] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCity, setSelectedCity] = useState(null);
+  const [showSearch, setShowSearch] = useState(false);
+
+  useEffect(() => {
+    loadCities();
+  }, []);
+
+  const loadCities = async () => {
+    const cityData = await City.list();
+    setCities(cityData);
+  };
+
+  const createColoredIcon = (aqi) => {
+    const color = getMarkerColor(aqi);
+    return L.divIcon({
+      className: 'custom-marker',
+      html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+  };
+
+  return (
+    <div className="relative h-screen">
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 z-[1000] bg-gradient-to-r from-blue-100 to-blue-200 px-4 py-3">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+            <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+            <span className="ml-2 font-semibold text-gray-800">Maps</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Search Button/Bar */}
+      <div className="absolute top-20 left-4 right-4 z-[1000]">
+        {showSearch ? (
+          <Card className="p-4">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowSearch(false)}
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <Input
+                type="text"
+                placeholder="Search locations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1"
+                autoFocus
+              />
+            </div>
+          </Card>
+        ) : (
+          <Button
+            onClick={() => setShowSearch(true)}
+            className="w-full bg-white text-gray-700 justify-between shadow-md hover:bg-gray-50"
+          >
+            <span>Search</span>
+            <Search className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
+
+      {/* Map */}
+      <MapContainer
+        center={[28.6139, 77.2090]} // Delhi coordinates
+        zoom={6}
+        className="h-full w-full"
+        style={{ height: '100vh' }}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
+        
+        {cities.map((city) => (
+          city.latitude && city.longitude && (
+            <Marker
+              key={city.id}
+              position={[city.latitude, city.longitude]}
+              icon={createColoredIcon(city.aqi)}
+            >
+              <Popup>
+                <div className="text-center">
+                  <h3 className="font-bold text-lg">{city.name}</h3>
+                  <p className="text-sm text-gray-600">AQI: {city.aqi}</p>
+                  <div className={`inline-block px-2 py-1 rounded text-white text-xs ${
+                    city.aqi <= 50 ? 'bg-green-500' :
+                    city.aqi <= 100 ? 'bg-yellow-500' :
+                    city.aqi <= 150 ? 'bg-orange-500' :
+                    city.aqi <= 200 ? 'bg-red-500' : 'bg-purple-600'
+                  }`}>
+                    {city.aqi <= 50 ? 'Good' :
+                     city.aqi <= 100 ? 'Moderate' :
+                     city.aqi <= 150 ? 'Unhealthy for Sensitive' :
+                     city.aqi <= 200 ? 'Unhealthy' : 'Very Unhealthy'}
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          )
+        ))}
+      </MapContainer>
+
+      {/* Selected City Info */}
+      {selectedCity && (
+        <Card className="absolute bottom-20 left-4 right-4 z-[1000] p-4 bg-green-500 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-lg">{selectedCity.name}</h3>
+              <p>AQI: {selectedCity.aqi} - Good</p>
+            </div>
+            <Button
+              variant="outline"
+              className="bg-green-600 text-white border-white hover:bg-green-700"
+            >
+              Good
+            </Button>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}

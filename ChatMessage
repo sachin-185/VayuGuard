@@ -1,0 +1,22 @@
+{
+  "name": "ChatMessage",
+  "type": "object",
+  "properties": {
+    "message": {
+      "type": "string",
+      "description": "User message"
+    },
+    "response": {
+      "type": "string",
+      "description": "AI response"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User ID who sent the message"
+    }
+  },
+  "required": [
+    "message",
+    "response"
+  ]
+}
